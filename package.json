@@ -1,0 +1,25 @@
+{
+  "name": "pickalo-video",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vimalb/pickalo-video.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vimalb/pickalo-video/issues"
+  },
+  "homepage": "https://github.com/vimalb/pickalo-video#readme",
+  "description": "",
+  "dependencies": {
+    "argparse": "^2.0.1",
+    "dist-exiftool": "^10.53.0",
+    "lodash": "^4.17.21",
+    "node-exiftool": "^2.3.0"
+  }
+}
