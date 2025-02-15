@@ -18,6 +18,7 @@
   "description": "",
   "dependencies": {
     "argparse": "^2.0.1",
+    "date-fns": "^4.1.0",
     "dist-exiftool": "^10.53.0",
     "lodash": "^4.17.21",
     "node-exiftool": "^2.3.0"

@@ -4,6 +4,7 @@ import { ArgumentParser } from 'argparse';
 import { readdir } from 'node:fs/promises';
 import Path from 'node:path';
 import _ from 'lodash';
+import * as dateFns from 'date-fns';
 
 const parser = new ArgumentParser({
   description: 'Copy over exif metadata'
@@ -13,9 +14,9 @@ parser.add_argument('-t', '--target', { help: 'Path to target directory', requir
 parser.add_argument('-s', '--source', { help: 'Path to source directory', required: true });
 parser.add_argument('-c', '--commit', { help: 'Apply changes (default is preview)', required: false, action: 'store_true'})
 parser.add_argument('-v', '--verbose', { help: 'Show EXIF details', required: false, action: 'store_true'})
+parser.add_argument('-tz', '--timezone', { help: 'Override timezone offset (eg: -05:00)'});
 
-
-const { target, source, commit, verbose } = parser.parse_args();
+const { target, source, commit, verbose, timezone} = parser.parse_args();
 
 const targetFiles = await readdir(target);
 const sourceFiles = await readdir(source);
@@ -51,7 +52,7 @@ await ep.open();
 for(let i=0; i<matchesToUpdate.length; i++) {
   const {sourceFileName, targetFileName } = matchesToUpdate[i];
   console.log(`Copy metadata from ${sourceFileName} to ${targetFileName}`);
-  const attrsInScope = [
+  const timestampAttrsInScope = [
     'MediaCreateDate',
     'MediaModifyDate',
     'TrackCreateDate',
@@ -61,19 +62,31 @@ for(let i=0; i<matchesToUpdate.length; i++) {
     'EncodingTime'
   ]
   const { data: [sourceMetadata] } = await ep.readMetadata(sourceFileName, ['-File:all']);
-  const newTimestamp = _.sortBy(Object.values(_.pick(sourceMetadata, attrsInScope)))[0];
+  const newTimestamp = _.sortBy(Object.values(_.pick(sourceMetadata, timestampAttrsInScope)))[0];
 
   const { data: [targetMetadata] } = await ep.readMetadata(targetFileName, ['-File:all']);
-  const targetMetadataBefore = _.pick(targetMetadata, attrsInScope);
+  const targetMetadataBefore = _.pick(targetMetadata, timestampAttrsInScope);
+  const formatTimestamp = (ts) => {
+    return timezone ? dateFns.parse(
+      `${ts} ${timezone}`, 'yyyy:MM:dd HH:mm:ss XXXXX', new Date()
+    ).toISOString().substring(0,19).replaceAll('T', ' ').replaceAll('-',':') : ts;
+  };
   const targetMetadataAfter = Object.fromEntries(
-    Object.keys(targetMetadataBefore).map(k => [k, sourceMetadata[k] ?? newTimestamp])
+    Object.keys(targetMetadataBefore).map(k => [k, formatTimestamp(sourceMetadata[k] ?? newTimestamp)])
   )
 
   if(verbose){
     console.log('Replacing', targetMetadataBefore, 'with', targetMetadataAfter);
+    const allKeys = Object.keys({
+      ...sourceMetadata,
+      ...targetMetadata
+    })
+    const allDiffs = allKeys.map(k => [k, [sourceMetadata[k] ?? null, targetMetadata[k] ?? null]])
+    //console.log(allDiffs)
   }
   if(commit) {
     await ep.writeMetadata(targetFileName, targetMetadataAfter, ['overwrite_original']);
+
   }
 }
 
